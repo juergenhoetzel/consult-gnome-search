@@ -1,0 +1,10 @@
+#+title: Gnome Search Provider Emacs Integration
+
+Search is a central element of the Gnome desktop environment.  Many
+applications implement the [[https://developer.gnome.org/documentation/tutorials/search-provider.html][Search Provider]] =dbus= interface to
+provide suitable results.
+
+The aim of this package is to make these search results also available
+within the Emacs editor.
+
+[[file:img/gnome-search-minibuffer.png]]
