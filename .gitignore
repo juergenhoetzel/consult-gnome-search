@@ -1,0 +1,7 @@
+*~
+*.pnm
+*.pbm
+/.eldev
+/Eldev-local
+*autoloads.el
+
