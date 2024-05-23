@@ -8,3 +8,29 @@ The aim of this package is to make these search results also available
 within the Emacs editor.
 
 [[file:img/gnome-search-minibuffer.png]]
+
+* Configuration
+
+The dbus-method =ActivateResult= is used to open the selected result in the application implementing the [[https://developer.gnome.org/documentation/tutorials/search-provider.html][Search Provider]].
+Nautilus for example leverages [[https://portland.freedesktop.org/doc/xdg-mime.html][xdg-mime]]  to delelegate the activation to the configured application.
+
+You most likely wan't to set:
+#+begin_src bash
+xdg-mime default emacsclient.desktop text/plain
+xdg-mime default emacsclient.desktop text/x-csrc
+#+end_src
+
+#+RESULTS:
+
+to edit edit the selected files within Emacs.
+
+* Installation
+
+Available via =package-vc-install= (Emacs 29):
+
+#+begin_src elisp
+  (package-vc-install "https://github.com/juergenhoetzel/consult-gnome-search")
+#+end_src
+
+I plan to publish the package later on [[https://melpa.org/][MELPA]]. 
+
