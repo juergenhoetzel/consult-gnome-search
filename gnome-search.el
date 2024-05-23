@@ -31,6 +31,14 @@
 
 (defvar gnome-search-providers-directory "/usr/share/gnome-shell/search-providers/") ;FIXME: Hardcoded!
 
+(defgroup gnome-search nil
+  "Options concerning gnome search."
+  :tag "Gnome Search"
+  :group 'gnome-search)
+
+(defcustom gnome-search-ignored-names nil "List of ignored dbus search-provider-names"
+  :type '(repeat (string :tag "Bus name: ")))
+
 (defun locate-desktop-file-name (desktop-name)
   "Return absolute file-name for DESKTOP-NAME.
 
