@@ -117,6 +117,17 @@ name slot in `gnome-search--get-providers'."
     (gnome-search-provider-name
      (gnome-search-result-provider (get-text-property 0 'consult--candidate cand)))))
 
+(defun consult-gnome-search--activate-result (result)
+  "Activate search result RESULT."
+  (unless (gnome-search-result-p result)
+    (error "Invalid argument: %s" (type-of result)))
+  (let ((id (gnome-search-result-id result))
+	(bus-name (gnome-search-provider-bus-name (gnome-search-result-provider result)))
+	(object-path (gnome-search-provider-object-path (gnome-search-result-provider result)))
+	(timestamp (time-convert nil 'integer))
+	(search-terms (gnome-search-result-terms result)))
+    (dbus-call-method :session bus-name object-path "org.gnome.Shell.SearchProvider2" "ActivateResult" id search-terms  timestamp)))
+
 ;;;###autoload
 (defun consult-gnome-search (&optional initial)
   "Search gnome search providers given INITIAL input.
@@ -124,7 +135,7 @@ name slot in `gnome-search--get-providers'."
 The input string is not preprocessed and passed literally to the
 underlying man commands."
   (interactive)
-  (gnome-search--activate-result
+  (consult-gnome-search--activate-result
    (consult--read
     (consult-gnome-search-collection)
     :prompt "Gnome search: "
