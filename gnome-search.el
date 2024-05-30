@@ -186,18 +186,6 @@ If optional arg SAVE-P is non-nil, save image as gnome-search_NNNN.pbm also as `
 	      ((string= (car icon-serialized) "file")))
 	(create-image (url-filename (url-generic-parse-url (caadr icon-serialized))) nil nil :height ( - (frame-char-height) 2) :ascent 'center))))
 
-
-(defun gnome-search--activate-result (result)
-  "Activate search result RESULT."
-  (unless (gnome-search-result-p result)
-    (error "Invalid argument: %s" (type-of result)))
-  (let ((id (gnome-search-result-id result))
-	(bus-name (gnome-search-provider-bus-name (gnome-search-result-provider result)))
-	(object-path (gnome-search-provider-object-path (gnome-search-result-provider result)))
-	(timestamp (time-convert nil 'integer))
-	(search-terms (gnome-search-result-terms result)))
-    (dbus-call-method :session bus-name object-path "org.gnome.Shell.SearchProvider2" "ActivateResult" id search-terms  timestamp)))
-
 (provide 'gnome-search)
 ;;; gnome-search.el ends here
 

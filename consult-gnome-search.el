@@ -27,6 +27,7 @@
 ;;; Code:
 
 (require 'gnome-search)
+(require 'url-util)
 
 (defface consult-gnome-search-name
   '((t :inherit font-lock-function-name-face))
@@ -42,6 +43,26 @@
   "Maximum number of results to receive for a provider.  0 means no limit."
   :type 'integer
   :group 'consult-gnome-search)
+
+
+(defun consult-gnome-search-find-nautilus-id (result-id)
+  "Edit filename associated with RESULT-ID which is expected to be a file URL."
+  (if-let ((file-name (url-unhex-string (url-filename (url-generic-parse-url result-id)))))
+      (find-file file-name)
+    (warn "Failed to parse result-id %s to as file-name" result-id)))
+
+(defcustom consult-gnome-search-activate-functions '(("org.gnome.Nautilus" . consult-gnome-search-find-nautilus-id))
+  "How the command `consult-gnome-search' activates the result.
+
+An association list of (PROVIDER . FUNCTION) pairs.  PROVIDER
+identifies bus name of a `gnome-search-provider'.  The associated
+FUNCTION specifies a function of a single result-id argument
+activating the result instead using the default method of the gnome
+search provider"
+  :group 'consult-gnome-search
+  :type '(repeat (cons (string :tag "D-Bus name")
+		       (function :tag "Activation function"))))
+
 
 (defun consult-gnome-search--receive-candidates (async provider terms results)
   (unless (zerop consult-gnome-search-max-results)
@@ -68,7 +89,7 @@
 (defun consult-gnome--async-search (async)
   "Async search provider for `consult-gnome-search'
 
-ASYNC is the async function which receives the candidates."
+  ASYNC is the async function which receives the candidates."
   (lambda (action)
     (pcase-exhaustive action
       ((pred stringp)
@@ -92,8 +113,8 @@ ASYNC is the async function which receives the candidates."
 
 (defun consult-gnome-search--narrow ()
   "Return narrow key configuration used with `consult-gnome-search'.
-For the format see `consult--read', for the value types see the
-name slot in `gnome-search--get-providers'."
+  For the format see `consult--read', for the value types see the
+  name slot in `gnome-search--get-providers'."
   (let ((available-keys `(,@(number-sequence ?A ?Z) ,@(number-sequence ?a ?z)))
 	narrow-keys)
     ;; the list of provider-names ist different on each system: Create a deterministic dynamic key configuration
@@ -117,14 +138,27 @@ name slot in `gnome-search--get-providers'."
     (gnome-search-provider-name
      (gnome-search-result-provider (get-text-property 0 'consult--candidate cand)))))
 
+(defun consult-gnome-search--activate-result (result)
+  "Activate search result RESULT."
+  (unless (gnome-search-result-p result)
+    (error "Invalid argument: %s" (type-of result)))
+  (let ((id (gnome-search-result-id result))
+	(bus-name (gnome-search-provider-bus-name (gnome-search-result-provider result)))
+	(object-path (gnome-search-provider-object-path (gnome-search-result-provider result)))
+	(timestamp (time-convert nil 'integer))
+	(search-terms (gnome-search-result-terms result)))
+    (if-let ((f (cdr (assoc bus-name consult-gnome-search-activate-functions))))
+	(funcall f id)
+      (dbus-call-method :session bus-name object-path "org.gnome.Shell.SearchProvider2" "ActivateResult" id search-terms  timestamp))))
+
 ;;;###autoload
 (defun consult-gnome-search (&optional initial)
   "Search gnome search providers given INITIAL input.
 
-The input string is not preprocessed and passed literally to the
-underlying man commands."
+  The input string is not preprocessed and passed literally to the
+  underlying man commands."
   (interactive)
-  (gnome-search--activate-result
+  (consult-gnome-search--activate-result
    (consult--read
     (consult-gnome-search-collection)
     :prompt "Gnome search: "
