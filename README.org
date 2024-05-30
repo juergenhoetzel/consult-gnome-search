@@ -20,14 +20,13 @@ xdg-mime default emacsclient.desktop text/plain
 xdg-mime default emacsclient.desktop text/x-csrc
 #+end_src
 
+
+to edit edit the selected files within Emacs.
+
 Activation can also take place completely in elisp without having to
 go via the search provider; for this, a corresponding function must be
 defined in =consult-gnome-search-activate-functions=.
 
-
-#+RESULTS:
-
-to edit edit the selected files within Emacs.
 
 * Installation
 
