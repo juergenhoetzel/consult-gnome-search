@@ -3,6 +3,7 @@
 ;; Copyright (C) 2024  Jürgen Hötzel, Alexis Purslane
 
 ;; Author: Jürgen Hötzel <juergen@hoetzel.info>, Alexis Purslane <alexispurslane@pm.me>
+;; URL: https://github.com/alexispurslane/consult-gnome-search
 ;; Keywords: convenience
 ;; Version: 0.0.2
 ;; Package-Requires: ((emacs "29.1") (consult "0.8"))
@@ -22,7 +23,8 @@
 
 ;;; Commentary:
 
-;; 
+;; Trying to figure out how to add description metadata as an
+;; annotation to consult -- alexis
 
 ;;; Code:
 
@@ -40,13 +42,14 @@
 
 
 (defcustom consult-gnome-search-max-results 5
-    "Maximum number of results to receive for a provider.  0 means no limit."
+    "Maximum number of results to receive for a provider.  0
+means no limit."
     :type 'integer
     :group 'consult-gnome-search)
 
-
 (defun consult-gnome-search-find-nautilus-id (result-id)
-    "Edit filename associated with RESULT-ID which is expected to be a file URL."
+    "Edit filename associated with RESULT-ID which is expected to
+be a file URL."
     (if-let ((file-name (url-unhex-string (url-filename (url-generic-parse-url result-id)))))
             (find-file file-name)
         (warn "Failed to parse result-id %s to as file-name" result-id)))
@@ -77,7 +80,8 @@ search provider"
         (funcall async gs-results)))
 
 (defun consult-gnome-search--transformer (gs-result)
-    "Transformer to produce a completion candidate from `gnome-search-result' GS-RESULT."
+    "Transformer to produce a completion candidate from
+`gnome-search-result' GS-RESULT."
     (propertize
      (concat (if-let ((image (gnome-search--create-image gs-result)))
 	                 (propertize " "		;optional icon
@@ -86,10 +90,10 @@ search provider"
      'consult--candidate gs-result
      'face 'consult-gnome-search-name))
 
-(defun consult-gnome--async-search (async)
-    "Async search provider for `consult-gnome-search'
+(defun consult-gnome-search--async-search (async)
+    "Async search provider for `consult-gnome-search'.
 
-  ASYNC is the async function which receives the candidates."
+ASYNC is the async function which receives the candidates."
     (lambda (action)
         (pcase-exhaustive action
             ((pred stringp)
@@ -107,14 +111,15 @@ search provider"
         (consult--async-sink)
         (consult--async-refresh-immediate)
         (consult--async-map #'consult-gnome-search--transformer)
-        (consult-gnome--async-search)
+        (consult-gnome-search--async-search)
         (consult--async-throttle)
         (consult--async-split)))
 
 (defun consult-gnome-search--narrow ()
     "Return narrow key configuration used with `consult-gnome-search'.
-  For the format see `consult--read', for the value types see the
-  name slot in `gnome-search--get-providers'."
+
+For the format see `consult--read', for the value types see the
+name slot in `gnome-search--get-providers'."
     (let ((available-keys `(,@(number-sequence ?A ?Z) ,@(number-sequence ?a ?z)))
 	      narrow-keys)
         ;; the list of provider-names ist different on each system: Create a deterministic dynamic key configuration
@@ -126,9 +131,9 @@ search provider"
 			                        name)))
 	                (progn
 	                    (push (cons key name) narrow-keys)
-	                    (setq available-keyes (delq key available-keys)))
+	                    (setq available-keys (delq key available-keys)))
 	            (push (cons (car available-keys) name) narrow-keys)				;fallback, choose random
-	            (setq available-keyes (cdr available-keys))))
+	            (setq available-keys (cdr available-keys))))
         (nreverse narrow-keys)))
 
 
@@ -155,8 +160,8 @@ search provider"
 (defun consult-gnome-search (&optional initial)
     "Search gnome search providers given INITIAL input.
 
-  The input string is not preprocessed and passed literally to the
-  underlying man commands."
+The input string is not preprocessed and passed literally to the
+underlying man commands."
     (interactive)
     (consult-gnome-search--activate-result
      (consult--read
