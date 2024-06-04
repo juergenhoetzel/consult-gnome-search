@@ -1,11 +1,11 @@
 ;;; gnome-search.el --- Gnome search interface                -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2024  Jürgen Hötzel
+;; Copyright (C) 2024  Jürgen Hötzel, Alexis Purslane
 
-;; Author: Jürgen Hötzel <juergen@hoetzel.info>
+;; Author: Jürgen Hötzel <juergen@hoetzel.info>, Alexis Purslane <alexispurslane@pm.me>
 ;; Keywords: convenience
 ;; Homepage: https://github.com/juergenhoetzel/emacs-gnome-search
-;; Version: 0.0.2
+;; Version: 0.0.1
 ;; Package-Requires: ((emacs "27.1"))
 
 ;; This program is free software; you can redistribute it and/or modify
@@ -33,22 +33,22 @@
 (defvar gnome-search-providers-directory "/usr/share/gnome-shell/search-providers/") ;FIXME: Hardcoded!
 
 (defgroup gnome-search nil
-  "Options concerning gnome search."
-  :tag "Gnome Search"
-  :group 'gnome-search)
+    "Options concerning gnome search."
+    :tag "Gnome Search"
+    :group 'gnome-search)
 
 (defcustom gnome-search-ignored-names nil "List of ignored dbus search-provider-names"
-  :type '(repeat (string :tag "Bus name: ")))
+    :type '(repeat (string :tag "Bus name: ")))
 
 (defun locate-desktop-file-name (desktop-name)
-  "Return absolute file-name for DESKTOP-NAME.
+    "Return absolute file-name for DESKTOP-NAME.
 
 DESKTOP-NAME must be a .desktop file-name as defined in the XDG Desktop Entry specification."
-  (seq-some (lambda (dir)
-	      (let ((absolute-name (concat (file-name-as-directory dir) "applications/" desktop-name)))
-		(when (file-exists-p absolute-name)
-		  absolute-name)))
-	    (xdg-data-dirs)))
+    (seq-some (lambda (dir)
+	              (let ((absolute-name (concat (file-name-as-directory dir) "applications/" desktop-name)))
+		              (when (file-exists-p absolute-name)
+		                  absolute-name)))
+	          (xdg-data-dirs)))
 
 
 ;; The basic structure search providers config file
@@ -56,122 +56,122 @@ DESKTOP-NAME must be a .desktop file-name as defined in the XDG Desktop Entry sp
 (cl-defstruct (gnome-search-provider)  desktop-id bus-name object-path name)
 
 (defun gnome-search-make-provider (filename)
-  "Get `gnome-search-provider' structure from FILENAME."
-  (with-temp-buffer
-    (insert-file-contents filename)
-    (let ((provider (make-gnome-search-provider)))
-      (while (search-forward-regexp "\\(.*\\)=\\(.*\\)\n?" nil t)
-	(setf (pcase (match-string 1)
-		("DesktopId" (gnome-search-provider-desktop-id provider))
-		("BusName" (gnome-search-provider-bus-name provider))
-		("ObjectPath" (gnome-search-provider-object-path provider)))
-	      (match-string 2)))
-      (if-let* ((file-name (locate-desktop-file-name (gnome-search-provider-desktop-id provider)))
-		(name (ht-get  (xdg-desktop-read-file  file-name) "Name" )))
-	  (setf (gnome-search-provider-name provider) name))
-      provider)))
+    "Get `gnome-search-provider' structure from FILENAME."
+    (with-temp-buffer
+        (insert-file-contents filename)
+        (let ((provider (make-gnome-search-provider)))
+            (while (search-forward-regexp "\\(.*\\)=\\(.*\\)\n?" nil t)
+	            (setf (pcase (match-string 1)
+		                  ("DesktopId" (gnome-search-provider-desktop-id provider))
+		                  ("BusName" (gnome-search-provider-bus-name provider))
+		                  ("ObjectPath" (gnome-search-provider-object-path provider)))
+	                  (match-string 2)))
+            (if-let* ((file-name (locate-desktop-file-name (gnome-search-provider-desktop-id provider)))
+		              (name (gethash "Name" (xdg-desktop-read-file  file-name))))
+	                (setf (gnome-search-provider-name provider) name))
+            provider)))
 
 (defvar gnome-search-providers nil
-  "List of available `gnome-search-provider' instances.")
+    "List of available `gnome-search-provider' instances.")
 
 (defun gnome-search--get-providers ()
-  (let ((installed-search-providers (mapcar #'gnome-search-make-provider (directory-files gnome-search-providers-directory t "\.ini$")))
-	(names (seq-union (dbus-list-known-names :session) (dbus-list-activatable-names :session))))
-    (cl-remove-if (lambda (provider) (or (member (gnome-search-provider-bus-name provider) gnome-search-ignored-names)
-					 (not (member (gnome-search-provider-bus-name provider) names))))
-		  installed-search-providers)))
+    (let ((installed-search-providers (mapcar #'gnome-search-make-provider (directory-files gnome-search-providers-directory t "\.ini$")))
+	      (names (seq-union (dbus-list-known-names :session) (dbus-list-activatable-names :session))))
+        (cl-remove-if (lambda (provider) (or (member (gnome-search-provider-bus-name provider) gnome-search-ignored-names)
+					                         (not (member (gnome-search-provider-bus-name provider) names))))
+		              installed-search-providers)))
 
 (defun gnome-search-internal (provider terms);; FIXME Non-blocking: Remove
-  "Search list of TERMS via search provider PROVIDER."
-  (dbus-call-method
-   :session (gnome-search-provider-bus-name provider) (gnome-search-provider-object-path provider)
-   "org.gnome.Shell.SearchProvider2"
-   "GetInitialResultSet" terms))
+    "Search list of TERMS via search provider PROVIDER."
+    (dbus-call-method
+     :session (gnome-search-provider-bus-name provider) (gnome-search-provider-object-path provider)
+     "org.gnome.Shell.SearchProvider2"
+     "GetInitialResultSet" terms))
 
 (defun gnome-search-results-metas (provider results)
-  "Return list of meta data used to display each given result in RESULTS.
+    "Return list of meta data used to display each given result in RESULTS.
 
 Results is a list of unique matches returned by `gnome-search-provider'."
-  (dbus-call-method
-   :session (gnome-search-provider-bus-name provider) (gnome-search-provider-object-path provider)
-   "org.gnome.Shell.SearchProvider2"
-   "GetResultMetas" results))
+    (dbus-call-method
+     :session (gnome-search-provider-bus-name provider) (gnome-search-provider-object-path provider)
+     "org.gnome.Shell.SearchProvider2"
+     "GetResultMetas" results))
 
 (defun gnome-search-get-provider (desktop-id)
-  "Return `gnome-search-provider' matching string DESKTOP-ID."
-  (cl-find-if  (lambda (provider) (equal (gnome-search-provider-desktop-id provider) desktop-id)) (gnome-search--get-providers)))
+    "Return `gnome-search-provider' matching string DESKTOP-ID."
+    (cl-find-if  (lambda (provider) (equal (gnome-search-provider-desktop-id provider) desktop-id)) (gnome-search--get-providers)))
 
 (cl-defstruct (gnome-search-result) provider id name description icon icon-data terms)
 
 (defun gnome-search--result-from-meta (provider metadata)
-  (let ((result (make-gnome-search-result :provider provider)))
-    (dolist (kv metadata)
-      (pcase (car kv)
-	("id" (setf (gnome-search-result-id result) (caadr kv)))
-	("name" (setf (gnome-search-result-name result) (caadr kv)))
-	("description" (setf (gnome-search-result-description result) (caadr kv)))
-	("icon" (setf (gnome-search-result-icon result) (caadr kv)))
-	("icon-data" (setf (gnome-search-result-icon-data result) (caadr kv)))))
-    result))
+    (let ((result (make-gnome-search-result :provider provider)))
+        (dolist (kv metadata)
+            (pcase (car kv)
+	            ("id" (setf (gnome-search-result-id result) (caadr kv)))
+	            ("name" (setf (gnome-search-result-name result) (caadr kv)))
+	            ("description" (setf (gnome-search-result-description result) (caadr kv)))
+	            ("icon" (setf (gnome-search-result-icon result) (caadr kv)))
+	            ("icon-data" (setf (gnome-search-result-icon-data result) (caadr kv)))))
+        result))
 
 
 (defun gnome-search-internal-async (provider terms callback)
-  "Search list of TERMS via search provider PROVIDER."
-  (dbus-call-method-asynchronously
-   :session (gnome-search-provider-bus-name provider) (gnome-search-provider-object-path provider)
-   "org.gnome.Shell.SearchProvider2"
-   "GetInitialResultSet" callback terms))
+    "Search list of TERMS via search provider PROVIDER."
+    (dbus-call-method-asynchronously
+     :session (gnome-search-provider-bus-name provider) (gnome-search-provider-object-path provider)
+     "org.gnome.Shell.SearchProvider2"
+     "GetInitialResultSet" callback terms))
 
 (defun gnome-search-async (terms callback &optional providers)
-  "Search list of TERMS via all providers.
+    "Search list of TERMS via all providers.
 
 Return an association of results with desktop-id of the provider as key.
 "
-  (mapcar (lambda (provider)
-	    (gnome-search-internal-async provider terms
-					 (apply-partially callback provider)))
-	  (or providers  (gnome-search--get-providers))))
+    (mapcar (lambda (provider)
+	            (gnome-search-internal-async provider terms
+					                         (apply-partially callback provider)))
+	        (or providers  (gnome-search--get-providers))))
 
 (defun gnome-search (terms &optional providers)
-  "Search list of TERMS via all providers.
+    "Search list of TERMS via all providers.
 
 Return an association of results with desktop-id of the provider as key.
 "
-  (unless (listp terms)
-    (setq terms (split-string terms)))
-  (thread-last
-    (or providers  (gnome-search--get-providers))
-    (seq-keep (lambda (provider)
-		(if-let ((results (gnome-search-internal provider terms))
-			 (metas (gnome-search-results-metas provider results)))
-		    (mapcar (apply-partially #'gnome-search--result-from-meta provider) metas))))
-    (apply #'append )))
+    (unless (listp terms)
+        (setq terms (split-string terms)))
+    (thread-last
+        (or providers  (gnome-search--get-providers))
+        (seq-keep (lambda (provider)
+		              (if-let ((results (gnome-search-internal provider terms))
+			                   (metas (gnome-search-results-metas provider results)))
+		                      (mapcar (apply-partially #'gnome-search--result-from-meta provider) metas))))
+        (apply #'append )))
 
 (defun gnome-search--create-image (result &optional save-p)
-  "Create an image from RESULT item received from `gnome-search'.
+    "Create an image from RESULT item received from `gnome-search'.
 
 If optional arg SAVE-P is non-nil, save image as gnome-search_NNNN.pbm also as `default-directory'). "
-  (if-let ((icon-data (gnome-search-result-icon-data result)))
-      (pcase icon-data
-	(`(,width  ,height ,stride ,(and (pred booleanp) has-alpha)  8 ,n-channels ,image-data)
-	 (with-temp-buffer
-	   (insert "P6\n")
-	   (insert (format "%d %d\n255\n" width height))
-	   (seq-do-indexed (lambda (b i)
-			     (unless (and has-alpha (eq (% i n-channels) (1- n-channels))) ;P6 Netpbm doesn't support alpha
-			       (insert (byte-to-string b))))
-			   image-data)
-	   (when save-p			;for debugging only
-	     (if-let* ((last-str (car (last (directory-files "." nil "gnome-search_[0-9][0-9][0-9][0-9].pbm"))))
-		       ((string-match "gnome-search_\\([0-9][0-9][0-9][0-9]\\).pbm" last-str))
-		       (n2 (1+ (string-to-number (match-string 1 last-str)))))
-		 (write-region (point-min) (point-max) (format "gnome-search_%04d.pbm" n2))
-	       (write-region (point-min) (point-max) "gnome-search_0000.pbm")))
-	   (create-image (string-make-unibyte (buffer-substring-no-properties (point-min) (point-max))) nil t :height ( - (frame-char-height) 2) :ascent 'center)))
-	(_ (progn (warn "Unknown image-data format: %s" icon-data) nil)))
-    (if-let* ((icon-serialized (gnome-search-result-icon result))
-	      ((string= (car icon-serialized) "file")))
-	(create-image (url-filename (url-generic-parse-url (caadr icon-serialized))) nil nil :height ( - (frame-char-height) 2) :ascent 'center))))
+    (if-let ((icon-data (gnome-search-result-icon-data result)))
+            (pcase icon-data
+	            (`(,width  ,height ,stride ,(and (pred booleanp) has-alpha)  8 ,n-channels ,image-data)
+	             (with-temp-buffer
+	                 (insert "P6\n")
+	                 (insert (format "%d %d\n255\n" width height))
+	                 (seq-do-indexed (lambda (b i)
+			                             (unless (and has-alpha (eq (% i n-channels) (1- n-channels))) ;P6 Netpbm doesn't support alpha
+			                                 (insert (byte-to-string b))))
+			                         image-data)
+	                 (when save-p			;for debugging only
+	                     (if-let* ((last-str (car (last (directory-files "." nil "gnome-search_[0-9][0-9][0-9][0-9].pbm"))))
+		                           ((string-match "gnome-search_\\([0-9][0-9][0-9][0-9]\\).pbm" last-str))
+		                           (n2 (1+ (string-to-number (match-string 1 last-str)))))
+		                         (write-region (point-min) (point-max) (format "gnome-search_%04d.pbm" n2))
+	                         (write-region (point-min) (point-max) "gnome-search_0000.pbm")))
+	                 (create-image (string-make-unibyte (buffer-substring-no-properties (point-min) (point-max))) nil t :height ( - (frame-char-height) 2) :ascent 'center)))
+	            (_ (progn (warn "Unknown image-data format: %s" icon-data) nil)))
+        (if-let* ((icon-serialized (gnome-search-result-icon result))
+	              ((string= (car icon-serialized) "file")))
+	            (create-image (url-filename (url-generic-parse-url (caadr icon-serialized))) nil nil :height ( - (frame-char-height) 2) :ascent 'center))))
 
 (provide 'gnome-search)
 ;;; gnome-search.el ends here
