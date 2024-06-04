@@ -5,8 +5,8 @@
 ;; Author: Jürgen Hötzel <juergen@hoetzel.info>, Alexis Purslane <alexispurslane@pm.me>
 ;; Keywords: convenience
 ;; Homepage: https://github.com/juergenhoetzel/emacs-gnome-search
-;; Version: 0.0.1
-;; Package-Requires: ((emacs "27.1"))
+;; Version: 0.0.2
+;; Package-Requires: ((emacs "29.1"))
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -23,7 +23,10 @@
 
 ;;; Commentary:
 
-;; 
+;; Removed unnecessary dependency on external package ht.el, and
+;; bumped the required version of Emacs high enough to get
+;; seq-union and seq-keep without an external package dependency
+;; either. -- 06/04/2024 Alexis Purslane
 
 ;;; Code:
 
@@ -40,7 +43,7 @@
 (defcustom gnome-search-ignored-names nil "List of ignored dbus search-provider-names"
     :type '(repeat (string :tag "Bus name: ")))
 
-(defun locate-desktop-file-name (desktop-name)
+(defun gnome-search-locate-desktop-file-name (desktop-name)
     "Return absolute file-name for DESKTOP-NAME.
 
 DESKTOP-NAME must be a .desktop file-name as defined in the XDG Desktop Entry specification."
@@ -66,7 +69,8 @@ DESKTOP-NAME must be a .desktop file-name as defined in the XDG Desktop Entry sp
 		                  ("BusName" (gnome-search-provider-bus-name provider))
 		                  ("ObjectPath" (gnome-search-provider-object-path provider)))
 	                  (match-string 2)))
-            (if-let* ((file-name (locate-desktop-file-name (gnome-search-provider-desktop-id provider)))
+            (if-let* ((file-name (gnome-search-locate-desktop-file-name
+                                  (gnome-search-provider-desktop-id provider)))
 		              (name (gethash "Name" (xdg-desktop-read-file  file-name))))
 	                (setf (gnome-search-provider-name provider) name))
             provider)))
