@@ -27,6 +27,7 @@
 
 ;;; Code:
 
+(require 'xdg)
 (require 'dbus)
 
 (defvar gnome-search-providers-directory "/usr/share/gnome-shell/search-providers/") ;FIXME: Hardcoded!
@@ -43,25 +44,11 @@
   "Return absolute file-name for DESKTOP-NAME.
 
 DESKTOP-NAME must be a .desktop file-name as defined in the XDG Desktop Entry specification."
-  (let ((dirs (split-string (or (getenv "XDG_DATA_DIRS")  "/usr/share/:/usr/local/share") ":")))
-    (seq-some (lambda (dir)
-		(let ((absolute-name (concat (file-name-as-directory dir) "applications/" desktop-name)))
-		  (when (file-exists-p absolute-name)
-		    absolute-name)))
-	      dirs)))
-
-(defun get-desktop-app-info (desktop-file-name)
-  "Return a cons (name . icon) for DESKTOP-FILE-NAME."
-  (let (name icon)
-    (with-temp-buffer
-      (insert-file-contents desktop-file-name)
-      (while (and (not (and name icon)) (re-search-forward "^\\(Name\\|Icon\\)=\\(.*\\)" nil t))
-	(setf (pcase (match-string 1)
-		("Name" name)
-		("Icon" icon))
-	      (match-string 2))))
-    (cons name icon)))
-
+  (seq-some (lambda (dir)
+	      (let ((absolute-name (concat (file-name-as-directory dir) "applications/" desktop-name)))
+		(when (file-exists-p absolute-name)
+		  absolute-name)))
+	    (xdg-data-dirs)))
 
 
 ;; The basic structure search providers config file
@@ -80,8 +67,8 @@ DESKTOP-NAME must be a .desktop file-name as defined in the XDG Desktop Entry sp
 		("ObjectPath" (gnome-search-provider-object-path provider)))
 	      (match-string 2)))
       (if-let* ((file-name (locate-desktop-file-name (gnome-search-provider-desktop-id provider)))
-		(app-info (get-desktop-app-info file-name)))
-	  (setf (gnome-search-provider-name provider) (car app-info)))
+		(name (ht-get  (xdg-desktop-read-file  file-name) "Name" )))
+	  (setf (gnome-search-provider-name provider) name))
       provider)))
 
 (defvar gnome-search-providers nil
