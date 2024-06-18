@@ -66,8 +66,9 @@ DESKTOP-NAME must be a .desktop file-name as defined in the XDG Desktop Entry sp
 		("BusName" (gnome-search-provider-bus-name provider))
 		("ObjectPath" (gnome-search-provider-object-path provider)))
 	      (match-string 2)))
-      (if-let* ((file-name (locate-desktop-file-name (gnome-search-provider-desktop-id provider)))
-		(name (ht-get  (xdg-desktop-read-file  file-name) "Name" )))
+      (if-let* ((file-name (gnome-search-locate-desktop-file-name
+                            (gnome-search-provider-desktop-id provider)))
+		(name (gethash "Name" (xdg-desktop-read-file  file-name))))
 	  (setf (gnome-search-provider-name provider) name))
       provider)))
 
