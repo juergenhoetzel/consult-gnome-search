@@ -131,8 +131,7 @@ result returned by a GNOME Search Provider."
   provider id name description icon icon-data terms)
 
 (defun gnome-search--result-from-meta (provider metadata)
-  "Create a `gnome-search-result' record from METADATA provided by
-PROVIDER method GetResultMetas."
+  "Create a `gnome-search-result' from METADATA returned from PROVIDER."
   (let ((result (make-gnome-search-result :provider provider)))
     (dolist (kv metadata)
       (pcase (car kv)
