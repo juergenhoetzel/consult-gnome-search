@@ -165,11 +165,9 @@ name slot in `gnome-search--get-providers'."
       (dbus-call-method :session bus-name object-path "org.gnome.Shell.SearchProvider2" "ActivateResult" id search-terms  timestamp))))
 
 ;;;###autoload
-(defun consult-gnome-search (&optional initial)
-  "Search gnome search providers given INITIAL input.
+(defun consult-gnome-search ()
+  "Search gnome search providers."
 
-  The input string is not preprocessed and passed literally to the
-  underlying man commands."
   (interactive)
   (consult-gnome-search--activate-result
    (consult--read
