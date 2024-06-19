@@ -182,7 +182,7 @@ If optional arg SAVE-P is non-nil, save image as
 gnome-search_NNNN.pbm also as `default-directory')."
   (if-let ((icon-data (gnome-search-result-icon-data result)))
       (pcase icon-data
-	(`(,width  ,height ,stride ,(and (pred booleanp) has-alpha)  8 ,n-channels ,image-data)
+	(`(,width  ,height ,_ ,(and (pred booleanp) has-alpha)  8 ,n-channels ,image-data)
 	 (with-temp-buffer
 	   (insert "P6\n")
 	   (insert (format "%d %d\n255\n" width height))
