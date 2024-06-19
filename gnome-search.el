@@ -3,10 +3,12 @@
 ;; Copyright (C) 2024  Jürgen Hötzel
 
 ;; Author: Jürgen Hötzel <juergen@hoetzel.info>
+;;         Alexis Purslane <alexispurslane@pm.me>
+;; Maintainer: Jürgen Hötzel <juergen@hoetzel.info>
 ;; Keywords: convenience
 ;; Homepage: https://github.com/juergenhoetzel/emacs-gnome-search
 ;; Version: 0.0.2
-;; Package-Requires: ((emacs "27.1"))
+;; Package-Requires: ((emacs "29.1"))
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -23,7 +25,9 @@
 
 ;;; Commentary:
 
-;; 
+;; This package provides generic utilities to access Gnome search
+;; providers using their dbus interface.
+;;
 
 ;;; Code:
 
@@ -33,14 +37,23 @@
 (defvar gnome-search-providers-directory "/usr/share/gnome-shell/search-providers/") ;FIXME: Hardcoded!
 
 (defgroup gnome-search nil
-  "Options concerning gnome search."
+  "Options concerning GNOME search."
   :tag "Gnome Search"
   :group 'gnome-search)
 
-(defcustom gnome-search-ignored-names nil "List of ignored dbus search-provider-names"
-  :type '(repeat (string :tag "Bus name: ")))
+(defcustom gnome-search-providers-directory
+  "/usr/share/gnome-shell/search-providers/"
+  "The directory to look for GNOME Shell Search Providers."
+  :type 'string
+  :group 'gnome-search) ;FIXME: Hardcoded!
 
-(defun locate-desktop-file-name (desktop-name)
+(defcustom gnome-search-ignored-names
+  nil
+  "List of ignored dbus search-provider-names."
+  :type '(repeat (string :tag "Bus name: "))
+  :group 'gnome-search)
+
+(defun gnome-search-locate-desktop-file-name (desktop-name)
   "Return absolute file-name for DESKTOP-NAME.
 
 DESKTOP-NAME must be a .desktop file-name as defined in the XDG Desktop Entry specification."
@@ -53,7 +66,11 @@ DESKTOP-NAME must be a .desktop file-name as defined in the XDG Desktop Entry sp
 
 ;; The basic structure search providers config file
 
-(cl-defstruct (gnome-search-provider)  desktop-id bus-name object-path name)
+(cl-defstruct (gnome-search-provider)
+  "A record containing the information relevant to a GNOME
+search provider: a DESKTOP-ID, a BUS-NAME, an OBJECT-PATH, and of
+course a regular NAME."
+  desktop-id bus-name object-path name)
 
 (defun gnome-search-make-provider (filename)
   "Get `gnome-search-provider' structure from FILENAME."
@@ -76,6 +93,9 @@ DESKTOP-NAME must be a .desktop file-name as defined in the XDG Desktop Entry sp
   "List of available `gnome-search-provider' instances.")
 
 (defun gnome-search--get-providers ()
+  "Fetch list of providers available.
+
+The `gnome-search-providers-directory' is searched for files with the suffix =.ini=."
   (let ((installed-search-providers (mapcar #'gnome-search-make-provider (directory-files gnome-search-providers-directory t "\.ini$")))
 	(names (seq-union (dbus-list-known-names :session) (dbus-list-activatable-names :session))))
     (cl-remove-if (lambda (provider) (or (member (gnome-search-provider-bus-name provider) gnome-search-ignored-names)
@@ -92,7 +112,7 @@ DESKTOP-NAME must be a .desktop file-name as defined in the XDG Desktop Entry sp
 (defun gnome-search-results-metas (provider results)
   "Return list of meta data used to display each given result in RESULTS.
 
-Results is a list of unique matches returned by `gnome-search-provider'."
+Results is a list of unique matches returned by `gnome-search-provider' PROVIDER."
   (dbus-call-method
    :session (gnome-search-provider-bus-name provider) (gnome-search-provider-object-path provider)
    "org.gnome.Shell.SearchProvider2"
@@ -102,9 +122,13 @@ Results is a list of unique matches returned by `gnome-search-provider'."
   "Return `gnome-search-provider' matching string DESKTOP-ID."
   (cl-find-if  (lambda (provider) (equal (gnome-search-provider-desktop-id provider) desktop-id)) (gnome-search--get-providers)))
 
-(cl-defstruct (gnome-search-result) provider id name description icon icon-data terms)
+(cl-defstruct (gnome-search-result)
+  "A record representing the information contained in a search
+result returned by a GNOME Search Provider."
+  provider id name description icon icon-data terms)
 
 (defun gnome-search--result-from-meta (provider metadata)
+  "Create a `gnome-search-result' record from METADATA provided by PROVIDER method GetResultMetas."
   (let ((result (make-gnome-search-result :provider provider)))
     (dolist (kv metadata)
       (pcase (car kv)
@@ -124,20 +148,20 @@ Results is a list of unique matches returned by `gnome-search-provider'."
    "GetInitialResultSet" callback terms))
 
 (defun gnome-search-async (terms callback &optional providers)
-  "Search list of TERMS via all providers.
+  "Search list of TERMS using search PROVIDERS.
 
-Return an association of results with desktop-id of the provider as key.
-"
+This calls the function CALLBACK as (apply CALLBACK provider result).
+Return an association of results with desktop-id of the provider as key."
   (mapcar (lambda (provider)
 	    (gnome-search-internal-async provider terms
 					 (apply-partially callback provider)))
 	  (or providers  (gnome-search--get-providers))))
 
 (defun gnome-search (terms &optional providers)
-  "Search list of TERMS via all providers.
+  "Search list of TERMS via all PROVIDERS.
 
-Return an association of results with desktop-id of the provider as key.
-"
+Return an association of results with desktop-id of the provider
+as key."
   (unless (listp terms)
     (setq terms (split-string terms)))
   (thread-last
@@ -151,7 +175,8 @@ Return an association of results with desktop-id of the provider as key.
 (defun gnome-search--create-image (result &optional save-p)
   "Create an image from RESULT item received from `gnome-search'.
 
-If optional arg SAVE-P is non-nil, save image as gnome-search_NNNN.pbm also as `default-directory'). "
+If optional arg SAVE-P is non-nil, save image as
+gnome-search_NNNN.pbm also as `default-directory')."
   (if-let ((icon-data (gnome-search-result-icon-data result)))
       (pcase icon-data
 	(`(,width  ,height ,stride ,(and (pred booleanp) has-alpha)  8 ,n-channels ,image-data)
