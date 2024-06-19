@@ -196,7 +196,7 @@ gnome-search_NNNN.pbm also as `default-directory')."
 		       (n2 (1+ (string-to-number (match-string 1 last-str)))))
 		 (write-region (point-min) (point-max) (format "gnome-search_%04d.pbm" n2))
 	       (write-region (point-min) (point-max) "gnome-search_0000.pbm")))
-	   (create-image (string-make-unibyte (buffer-substring-no-properties (point-min) (point-max))) nil t :height ( - (frame-char-height) 2) :ascent 'center)))
+	   (create-image (encode-coding-string (buffer-substring-no-properties (point-min) (point-max)) 'utf-8-unix) nil t :height ( - (frame-char-height) 2) :ascent 'center)))
 	(_ (progn (warn "Unknown image-data format: %s" icon-data) nil)))
     (if-let* ((icon-serialized (gnome-search-result-icon result))
 	      ((string= (car icon-serialized) "file")))
