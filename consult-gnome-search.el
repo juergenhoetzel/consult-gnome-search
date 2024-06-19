@@ -105,7 +105,7 @@ ASYNC is the async function which receives the candidates."
     (pcase-exhaustive action
       ((pred stringp)
        (when (not (string-empty-p (string-trim action)))
-	 (funcall async #'flush)
+	 (funcall async 'flush)
 	 (gnome-search-async (string-split action)
 			     (lambda (provider result)
 			       (when result
