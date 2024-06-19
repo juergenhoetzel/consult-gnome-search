@@ -3,9 +3,11 @@
 ;; Copyright (C) 2024  Jürgen Hötzel
 
 ;; Author: Jürgen Hötzel <juergen@hoetzel.info>
+;;         Alexis Purslane <alexispurslane@pm.me>
 ;; Keywords: convenience
-;; Version: 0.0.1
-;; Package-Requires: ((emacs "27.1") (consult "0.8"))
+;; Homepage: https://github.com/juergenhoetzel/emacs-gnome-search
+;; Version: 0.0.2
+;; Package-Requires: ((emacs "29.1") (consult "0.8"))
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -22,12 +24,14 @@
 
 ;;; Commentary:
 
-;; 
+;; This package provides functions to interactively query
+;; Gnome search providers using consult.
 
 ;;; Code:
 
 (require 'gnome-search)
 (require 'url-util)
+(require 'consult)
 
 (defface consult-gnome-search-name
   '((t :inherit font-lock-function-name-face))
@@ -40,7 +44,9 @@
 
 
 (defcustom consult-gnome-search-max-results 5
-  "Maximum number of results to receive for a provider.  0 means no limit."
+  "Maximum number of results to receive for a provider.
+
+  0 means no limit."
   :type 'integer
   :group 'consult-gnome-search)
 
@@ -65,19 +71,24 @@ search provider"
 
 
 (defun consult-gnome-search--receive-candidates (async provider terms results)
+  "Create the final (including metadata) list of `gnome-search-result' candidates.
+
+PROVIDER the associated `gnome-search-provider'.
+TERMS is a list of search terms used to create RESULTS.
+ASYNC is the async function which receives the candidates."
   (unless (zerop consult-gnome-search-max-results)
     (setq results (seq-take results consult-gnome-search-max-results)))
   (let* ((metas (gnome-search-results-metas provider results))
 	 (gs-results (mapcar  (lambda (meta)
 				(let ((gs-result (gnome-search--result-from-meta provider meta)))
 					;keep track of search terms (dbus ActivateResult callback)
-				  (setf (gnome-search-result-terms gs-result) terms) 
+				  (setf (gnome-search-result-terms gs-result) terms)
 				  gs-result))
 			      metas)))
     (funcall async gs-results)))
 
 (defun consult-gnome-search--transformer (gs-result)
-  "Transformer to produce a completion candidate from `gnome-search-result' GS-RESULT."
+  "Transform `gnome-search-result' GS-RESULT to a completion candidate."
   (propertize
    (concat (if-let ((image (gnome-search--create-image gs-result)))
 	       (propertize " "		;optional icon
@@ -86,15 +97,15 @@ search provider"
    'consult--candidate gs-result
    'face 'consult-gnome-search-name))
 
-(defun consult-gnome--async-search (async)
-  "Async search provider for `consult-gnome-search'
+(defun consult-gnome-search--async-search (async)
+  "Async search provider for `consult-gnome-search'.
 
-  ASYNC is the async function which receives the candidates."
+ASYNC is the async function which receives the candidates."
   (lambda (action)
     (pcase-exhaustive action
       ((pred stringp)
        (when (not (string-empty-p (string-trim action)))
-	 (funcall async #'flush)
+	 (funcall async 'flush)
 	 (gnome-search-async (string-split action)
 			     (lambda (provider result)
 			       (when result
@@ -103,18 +114,20 @@ search provider"
       (_ (funcall async action))))) 	;FIXME: Catchall?
 
 (defun consult-gnome-search-collection ()
+  "Generate an async completion function for `consult-gnome-search'."
   (thread-first
     (consult--async-sink)
     (consult--async-refresh-immediate)
     (consult--async-map #'consult-gnome-search--transformer)
-    (consult-gnome--async-search)
+    (consult-gnome-search--async-search)
     (consult--async-throttle)
     (consult--async-split)))
 
 (defun consult-gnome-search--narrow ()
   "Return narrow key configuration used with `consult-gnome-search'.
-  For the format see `consult--read', for the value types see the
-  name slot in `gnome-search--get-providers'."
+
+For the format see `consult--read', for the value types see the
+name slot in `gnome-search--get-providers'."
   (let ((available-keys `(,@(number-sequence ?A ?Z) ,@(number-sequence ?a ?z)))
 	narrow-keys)
     ;; the list of provider-names ist different on each system: Create a deterministic dynamic key configuration
@@ -126,9 +139,9 @@ search provider"
 			      name)))
 	  (progn
 	    (push (cons key name) narrow-keys)
-	    (setq available-keyes (delq key available-keys)))
+	    (setq available-keys (delq key available-keys)))
 	(push (cons (car available-keys) name) narrow-keys)				;fallback, choose random
-	(setq available-keyes (cdr available-keys))))
+	(setq available-keys (cdr available-keys))))
     (nreverse narrow-keys)))
 
 
@@ -152,11 +165,9 @@ search provider"
       (dbus-call-method :session bus-name object-path "org.gnome.Shell.SearchProvider2" "ActivateResult" id search-terms  timestamp))))
 
 ;;;###autoload
-(defun consult-gnome-search (&optional initial)
-  "Search gnome search providers given INITIAL input.
+(defun consult-gnome-search ()
+  "Search gnome search providers."
 
-  The input string is not preprocessed and passed literally to the
-  underlying man commands."
   (interactive)
   (consult-gnome-search--activate-result
    (consult--read

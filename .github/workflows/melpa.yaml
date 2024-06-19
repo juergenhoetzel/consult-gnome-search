@@ -1,0 +1,38 @@
+name: check
+
+on:
+  pull_request:
+    paths-ignore: ["**.org"]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    name: Run MELPA checks
+    strategy:
+      fail-fast: false
+      matrix:
+        emacs_version:
+          - 29.3
+          - release-snapshot
+        include:
+          - emacs_version: snapshot
+          - ignore_warnings: false
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Setup Emacs
+        uses: purcell/setup-emacs@master
+        with:
+          version: ${{ matrix.emacs_version }}
+      - name: Install Eldev
+        uses: emacs-eldev/setup-eldev@v1
+      # Check in a 2-stage process, as eldev does not support multiple packages in a repo
+      - name: Lint gnome-search.el
+        run: |
+          eldev -dtT  -S '(setq eldev-project-main-file "gnome-search.el")' lint -f gnome-search.el
+      - name: Lint consult-gnome-search.el
+        run: |
+          eldev -dtT  -S '(setq eldev-project-main-file "consult-gnome-search.el")' lint -f consult-gnome-search.el
+      - name: Ensure there are no byte-compilation warnings
+        run: |
+          eldev -dtT -C compile --set all --warnings-as-errors
