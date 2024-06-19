@@ -96,7 +96,7 @@ course a regular NAME."
   "Fetch list of providers available.
 
 The `gnome-search-providers-directory' is searched for files with the suffix =.ini=."
-  (let ((installed-search-providers (mapcar #'gnome-search-make-provider (directory-files gnome-search-providers-directory t "\.ini$")))
+  (let ((installed-search-providers (mapcar #'gnome-search-make-provider (directory-files gnome-search-providers-directory t "\\.ini\\'")))
 	(names (seq-union (dbus-list-known-names :session) (dbus-list-activatable-names :session))))
     (cl-remove-if (lambda (provider) (or (member (gnome-search-provider-bus-name provider) gnome-search-ignored-names)
 					 (not (member (gnome-search-provider-bus-name provider) names))))
@@ -187,7 +187,7 @@ gnome-search_NNNN.pbm also as `default-directory')."
 			       (insert (byte-to-string b))))
 			   image-data)
 	   (when save-p			;for debugging only
-	     (if-let* ((last-str (car (last (directory-files "." nil "gnome-search_[0-9][0-9][0-9][0-9].pbm"))))
+	     (if-let* ((last-str (car (last (directory-files "." nil "gnome-search_[0-9][0-9][0-9][0-9]\\.pbm"))))
 		       ((string-match "gnome-search_\\([0-9][0-9][0-9][0-9]\\).pbm" last-str))
 		       (n2 (1+ (string-to-number (match-string 1 last-str)))))
 		 (write-region (point-min) (point-max) (format "gnome-search_%04d.pbm" n2))
