@@ -56,7 +56,8 @@
 (defun gnome-search-locate-desktop-file-name (desktop-name)
   "Return absolute file-name for DESKTOP-NAME.
 
-DESKTOP-NAME must be a .desktop file-name as defined in the XDG Desktop Entry specification."
+DESKTOP-NAME must be a .desktop file-name as defined in the XDG
+Desktop Entry specification."
   (seq-some (lambda (dir)
 	      (let ((absolute-name (concat (file-name-as-directory dir) "applications/" desktop-name)))
 		(when (file-exists-p absolute-name)
@@ -95,7 +96,8 @@ course a regular NAME."
 (defun gnome-search--get-providers ()
   "Fetch list of providers available.
 
-The `gnome-search-providers-directory' is searched for files with the suffix =.ini=."
+The `gnome-search-providers-directory' is searched for files with the
+suffix =.ini=."
   (let ((installed-search-providers (mapcar #'gnome-search-make-provider (directory-files gnome-search-providers-directory t "\\.ini\\'")))
 	(names (seq-union (dbus-list-known-names :session) (dbus-list-activatable-names :session))))
     (cl-remove-if (lambda (provider) (or (member (gnome-search-provider-bus-name provider) gnome-search-ignored-names)
@@ -112,7 +114,8 @@ The `gnome-search-providers-directory' is searched for files with the suffix =.i
 (defun gnome-search-results-metas (provider results)
   "Return list of meta data used to display each given result in RESULTS.
 
-Results is a list of unique matches returned by `gnome-search-provider' PROVIDER."
+Results is a list of unique matches returned by
+`gnome-search-provider' PROVIDER."
   (dbus-call-method
    :session (gnome-search-provider-bus-name provider) (gnome-search-provider-object-path provider)
    "org.gnome.Shell.SearchProvider2"
@@ -128,7 +131,8 @@ result returned by a GNOME Search Provider."
   provider id name description icon icon-data terms)
 
 (defun gnome-search--result-from-meta (provider metadata)
-  "Create a `gnome-search-result' record from METADATA provided by PROVIDER method GetResultMetas."
+  "Create a `gnome-search-result' record from METADATA provided by
+PROVIDER method GetResultMetas."
   (let ((result (make-gnome-search-result :provider provider)))
     (dolist (kv metadata)
       (pcase (car kv)
