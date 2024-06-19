@@ -7,7 +7,7 @@
 (string-trim (shell-command-to-string "git describe --tags"))
 (eldev-use-package-archive 'melpa-unstable)
 (eldev-use-package-archive 'gnu)
-
+(setq eldev-project-main-file "consult-gnome-search.el")
 (eldev-use-plugin 'autoloads)
 (eldev-use-plugin 'maintainer)
 
