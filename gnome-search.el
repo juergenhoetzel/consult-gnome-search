@@ -152,10 +152,9 @@ result returned by a GNOME Search Provider."
 
 This calls the function CALLBACK as (apply CALLBACK provider result).
 Return an association of results with desktop-id of the provider as key."
-  (mapcar (lambda (provider)
-	    (gnome-search-internal-async provider terms
-					 (apply-partially callback provider)))
-	  (or providers  (gnome-search--get-providers))))
+  (dolist (provider (or providers  (gnome-search--get-providers)))
+    (gnome-search-internal-async provider terms
+				 (apply-partially callback provider))))
 
 (defun gnome-search (terms &optional providers)
   "Search list of TERMS via all PROVIDERS.
