@@ -31,6 +31,7 @@
 
 (require 'gnome-search)
 (require 'url-util)
+(require 'consult)
 
 (defface consult-gnome-search-name
   '((t :inherit font-lock-function-name-face))
